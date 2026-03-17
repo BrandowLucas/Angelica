@@ -28,9 +28,9 @@ public class BlockAPI {
                 ps = new PrintStream(outputFile);
                 String[] nameList = new String[4096];
                 for (String name17 : (Set<String>) registry.getKeys()) {
-                    Object block = registry.getObject(name17);
+                    Object block = registry.get(name17);
                     if (block != null) {
-                        int id = registry.getIDForObject(block);
+                        int id = registry.getIDForObject((Block) block);
                         if (id >= 0 && id < nameList.length) {
                             nameList[id] = name17;
                         }
@@ -106,7 +106,7 @@ public class BlockAPI {
             return null;
         }
         Block block = GameData.getBlockRegistry()
-            .getObject(namespace + ':' + blockName);
+            .get(namespace + ':' + blockName);
         if (block == null) {
             source.warning("unknown block %s:%s", namespace, blockName);
             return null;

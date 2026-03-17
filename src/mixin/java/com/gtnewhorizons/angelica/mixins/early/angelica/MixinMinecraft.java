@@ -8,6 +8,8 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.settings.GameSettings;
 import org.embeddedt.embeddium.impl.render.frame.RenderAheadManager;
 import org.lwjgl.input.Keyboard;
+import org.lwjgl.opengl.Display;
+import org.lwjgl.opengl.DisplayMode;
 import org.lwjgl.opengl.GL11;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Overwrite;
@@ -16,6 +18,9 @@ import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
+import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
+import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
+import com.gtnewhorizons.angelica.config.AngelicaConfig;
 
 @Mixin(Minecraft.class)
 public abstract class MixinMinecraft {
@@ -123,5 +128,75 @@ public abstract class MixinMinecraft {
     @Inject(method = "runTick", at = @At("RETURN"))
     private void angelica$streamingBufferEndFrame(CallbackInfo ci) {
         TessellatorStreamingDrawer.endFrame();
+    }
+
+    @WrapOperation(method = "updateDisplayMode", at = @At(value = "INVOKE", target = "Lorg/lwjgl/opengl/Display;setDisplayMode(Lorg/lwjgl/opengl/DisplayMode;)V", remap = false))
+    private void angelica$customFullscreenMode(DisplayMode desktopMode, Operation<Void> original) {
+        DisplayMode targetMode = desktopMode;
+        if (!"Current".equals(AngelicaConfig.fullscreenResolution) && AngelicaConfig.fullscreenResolution != null) {
+            String[] parts = AngelicaConfig.fullscreenResolution.split("@");
+            if (parts.length == 2) {
+                String[] res = parts[0].split("x");
+                if (res.length == 2) {
+                    try {
+                        int width = Integer.parseInt(res[0]);
+                        int height = Integer.parseInt(res[1]);
+                        int freq = Integer.parseInt(parts[1].replace("Hz", ""));
+                        DisplayMode[] modes = Display.getAvailableDisplayModes();
+                        DisplayMode bestMode = null;
+                        for (DisplayMode mode : modes) {
+                            if (mode.getWidth() == width && mode.getHeight() == height && mode.getFrequency() == freq) {
+                                if (bestMode == null || mode.getBitsPerPixel() > bestMode.getBitsPerPixel()) {
+                                    bestMode = mode;
+                                }
+                            }
+                        }
+                        if (bestMode != null) {
+                            targetMode = bestMode;
+                        }
+                    } catch (Exception e) {}
+                }
+            }
+        }
+
+        try {
+            // apply lwjgl3ify SDL3 fullscreen mode if present
+            Class<?> displayClass = Class.forName("org.lwjglx.opengl.Display");
+            long sdlWindow = (Long) displayClass.getMethod("getWindow").invoke(null);
+
+            Class<?> sdlVideoClass = Class.forName("org.lwjgl.sdl.SDLVideo");
+            Class<?> sdlDisplayModeClass = Class.forName("org.lwjgl.sdl.SDL_DisplayMode");
+
+            int monitor = (Integer) sdlVideoClass.getMethod("SDL_GetPrimaryDisplay").invoke(null);
+
+            Object modes = null;
+            try {
+                modes = sdlVideoClass.getMethod("SDL_GetFullscreenDisplayModes", int.class).invoke(null, monitor);
+            } catch (Exception e) {
+                modes = sdlVideoClass.getMethod("SDL_GetFullscreenDisplayModes", int.class, java.nio.IntBuffer.class).invoke(null, monitor, null);
+            }
+
+            if (modes != null) {
+                int remaining = (Integer) modes.getClass().getMethod("remaining").invoke(modes);
+                Object targetSdlMode = null;
+                for (int i = 0; i < remaining; i++) {
+                    long ptr = (Long) modes.getClass().getMethod("get", int.class).invoke(modes, i);
+                    Object sdlMode = sdlDisplayModeClass.getMethod("create", long.class).invoke(null, ptr);
+                    int width = (Integer) sdlDisplayModeClass.getMethod("w").invoke(sdlMode);
+                    int height = (Integer) sdlDisplayModeClass.getMethod("h").invoke(sdlMode);
+                    float refresh = (Float) sdlDisplayModeClass.getMethod("refresh_rate").invoke(sdlMode);
+
+                    if (width == targetMode.getWidth() && height == targetMode.getHeight() && Math.round(refresh) == targetMode.getFrequency()) {
+                        targetSdlMode = sdlMode;
+                        break;
+                    }
+                }
+                if (targetSdlMode != null) {
+                    sdlVideoClass.getMethod("SDL_SetWindowFullscreenMode", long.class, sdlDisplayModeClass).invoke(null, sdlWindow, targetSdlMode);
+                }
+            }
+        } catch (Throwable t) {}
+
+        original.call(targetMode);
     }
 }

@@ -142,7 +142,7 @@ public class SodiumControlElementFactory implements ControlElementFactory {
             this.drawRect(thumbX, sliderY, thumbX + (THUMB_WIDTH * 2), sliderY + sliderHeight, 0xFFFFFFFF);
             this.drawRect(sliderX, trackY, sliderX + sliderWidth, trackY + TRACK_HEIGHT, 0xFFFFFFFF);
 
-            String label = String.valueOf(this.getIntValue());
+            String label = this.formatter.format(this.getIntValue());
 
             int labelWidth = this.font.getStringWidth(label);
 

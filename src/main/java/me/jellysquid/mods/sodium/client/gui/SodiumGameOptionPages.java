@@ -31,6 +31,7 @@ import net.minecraft.client.resources.I18n;
 import net.minecraft.client.settings.GameSettings;
 import org.embeddedt.embeddium.impl.render.chunk.occlusion.AsyncOcclusionMode;
 import org.lwjgl.opengl.Display;
+import org.lwjgl.opengl.DisplayMode;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -40,6 +41,33 @@ public class SodiumGameOptionPages {
     private static final SodiumOptionsStorage sodiumOpts = new SodiumOptionsStorage();
     private static final MinecraftOptionsStorage vanillaOpts = new MinecraftOptionsStorage();
     private static final AngelicaOptionsStorage angelicaOpts = new AngelicaOptionsStorage();
+
+    private static final List<String> RESOLUTIONS = new ArrayList<>();
+
+    static {
+        RESOLUTIONS.add("Current");
+        try {
+            DisplayMode[] modes = Display.getAvailableDisplayModes();
+            java.util.Arrays.sort(modes, new java.util.Comparator<DisplayMode>() {
+                @Override
+                public int compare(DisplayMode display1, DisplayMode display2) {
+                    if (display1.getWidth() != display2.getWidth()) return Integer.compare(display2.getWidth(), display1.getWidth());
+                    if (display1.getHeight() != display2.getHeight()) return Integer.compare(display2.getHeight(), display1.getHeight());
+                    return Integer.compare(display2.getFrequency(), display1.getFrequency());
+                }
+            });
+            for (DisplayMode mode : modes) {
+                // ignore lower color depth modes if possible to avoid duplicates
+                if (mode.getBitsPerPixel() < 24) continue;
+                String str = mode.getWidth() + "x" + mode.getHeight() + "@" + mode.getFrequency() + "Hz";
+                if (!RESOLUTIONS.contains(str)) {
+                    RESOLUTIONS.add(str);
+                }
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
 
     public static OptionPage general() {
         final List<OptionGroup> groups = new ArrayList<>();
@@ -85,7 +113,7 @@ public class SodiumGameOptionPages {
         groups.add(firstGroupBuilder.build());
 
         int maxGuiScale = Math.max(3, Math.min(Minecraft.getMinecraft().displayWidth / 320, Minecraft.getMinecraft().displayHeight / 240));
-        groups.add(OptionGroup.createBuilder()
+        final OptionGroup.Builder secondGroupBuilder = OptionGroup.createBuilder()
                 .add(OptionImpl.createBuilder(int.class, vanillaOpts)
                         .setName(I18n.format("options.guiScale"))
                         .setTooltip(I18n.format("sodium.options.gui_scale.tooltip"))
@@ -118,6 +146,41 @@ public class SodiumGameOptionPages {
                             }
                         }, (opts) -> opts.fullScreen)
                         .build())
+                .add(OptionImpl.createBuilder(int.class, angelicaOpts)
+                        .setName(I18n.format("options.fullscreen.resolution"))
+                        .setTooltip(I18n.format("options.fullscreen.resolution.tooltip"))
+                        .setControl(option -> new SliderControl(option, 0, Math.max(0, RESOLUTIONS.size() - 1), 1, (v) -> RESOLUTIONS.get(v)))
+                        .setBinding((opts, value) -> {
+                            AngelicaConfig.fullscreenResolution = RESOLUTIONS.get(value);
+                            final Minecraft client = Minecraft.getMinecraft();
+                            if (client.isFullScreen()) {
+                                client.toggleFullscreen();
+                                client.toggleFullscreen();
+                            }
+                        }, opts -> Math.max(0, RESOLUTIONS.indexOf(AngelicaConfig.fullscreenResolution)))
+                        .build());
+
+        String sessionType = System.getenv("XDG_SESSION_TYPE");
+        boolean isWayland = sessionType != null && sessionType.equalsIgnoreCase("wayland");
+
+        if (isWayland) {
+            secondGroupBuilder.add(OptionImpl.createBuilder(boolean.class, angelicaOpts)
+                    .setName(I18n.format("options.fullscreen.mouse_fix"))
+                    .setTooltip(I18n.format("options.fullscreen.mouse_fix.tooltip"))
+                    .setControl(TickBoxControl::new)
+                    .setBinding((opts, value) -> AngelicaConfig.enableResolutionScalingMouseFix = value, opts -> AngelicaConfig.enableResolutionScalingMouseFix)
+                    .build());
+        }
+
+        groups.add(secondGroupBuilder.add(OptionImpl.createBuilder(boolean.class, angelicaOpts)
+                    .setName(I18n.format("options.angelica.sleepbeforeswap"))
+                    .setTooltip(I18n.format("options.angelica.sleepbeforeswap.tooltip"))
+                    .setControl(TickBoxControl::new)
+                    .setBinding((opts, value) -> {
+                        AngelicaConfig.sleepBeforeSwap = value;
+                    }, opts -> AngelicaConfig.sleepBeforeSwap)
+                    .setImpact(OptionImpact.VARIES)
+                    .build())
                 .add(OptionImpl.createBuilder(boolean.class, vanillaOpts)
                         .setName(I18n.format("options.vsync"))
                         .setTooltip(I18n.format("sodium.options.v_sync.tooltip"))
@@ -534,4 +597,27 @@ public class SodiumGameOptionPages {
         return new OptionPage(I18n.format("sodium.options.pages.appearance"), ImmutableList.copyOf(groups));
     }
 
+    public static OptionPage debug() {
+        final List<OptionGroup> groups = new ArrayList<>();
+
+        groups.add(OptionGroup.createBuilder()
+                .add(OptionImpl.createBuilder(boolean.class, angelicaOpts)
+                        .setName(I18n.format("sodium.options.show_fps.name"))
+                        .setTooltip(I18n.format("sodium.options.show_fps.tooltip"))
+                        .setControl(TickBoxControl::new)
+                        .setBinding((opts, value) -> AngelicaConfig.showFPS = value, opts -> AngelicaConfig.showFPS)
+                        .build())
+                .add(OptionImpl.createBuilder(boolean.class, sodiumOpts)
+                        .setName(I18n.format("sodium.options.use_gl_state_cache.name"))
+                        .setTooltip(I18n.format("sodium.options.use_gl_state_cache.tooltip"))
+                        .setControl(TickBoxControl::new)
+                        .setImpact(OptionImpact.EXTREME)
+                        .setBinding((opts, value) -> GLStateManager.BYPASS_CACHE = !value, opts -> !GLStateManager.BYPASS_CACHE)
+                        .setFlags(OptionFlag.REQUIRES_RENDERER_RELOAD)
+                        .build())
+                .build());
+
+        return new OptionPage(I18n.format("sodium.options.pages.debug"), ImmutableList.copyOf(groups));
+    }
 }
+
