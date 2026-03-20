@@ -35,12 +35,14 @@ public enum Mixins implements IMixins {
             , "angelica.MixinMinecraft"
             , "angelica.MixinMinecraftServer"
             , "angelica.bugfixes.MixinRenderGlobal_DestroyBlock"
+            , "angelica.bugfixes.MixinRendererLivingEntity_EyeDepth"
             , "angelica.debug.MixinMinecraft_FPSCap"
             , "angelica.ffp.MixinTessellator_CoreProfile"
             , "angelica.glsm.MixinSplashProgressCaching"
             , "angelica.gui.MixinGuiOptions"
             , "angelica.optimizations.MixinRendererLivingEntity"
             , "angelica.rendering.MixinRenderGlobal_SelectionBox"
+            , "angelica.gui.MixinGuiIngameForge_ModernF3"
         )
     ),
 
@@ -235,6 +237,7 @@ public enum Mixins implements IMixins {
             , "shaders.MixinTileEntityBeaconRenderer"
             , "shaders.MixinRenderEndPortal"
             , "shaders.MixinTileEntityRendererDispatcher"
+            , "shaders.MixinGlProgram"
         )
     ),
 
@@ -435,6 +438,12 @@ public enum Mixins implements IMixins {
             "MixinBlockStairs",
             "MixinRenderBlocks"
         ))
+    ),
+    NOTFINE_BOP_FOG(new MixinBuilder()
+        .setPhase(Phase.LATE)
+        .setApplyIf(() -> AngelicaConfig.enableNotFineFeatures)
+        .addRequiredMod(TargetedMod.BIOMES_O_PLENTY)
+        .addClientMixins("notfine.toggle.biomesoplenty.MixinFogHandler")
     ),
     NOTFINE_NO_DYNAMIC_SURROUNDINGS(new MixinBuilder()
         .setPhase(Phase.EARLY)
