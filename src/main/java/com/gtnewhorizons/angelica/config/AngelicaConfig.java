@@ -255,15 +255,7 @@ public class AngelicaConfig {
     @Config.RequiresMcRestart
     public static boolean disableGLVersionPinning;
 
-    @Config.Comment("Show FPS in the top left corner.")
-    @Config.DefaultBoolean(false)
-    public static boolean showFPS;
-
     @Config.Comment("Fullscreen Resolution. Format: WIDTHxHEIGHT@FREQUENCY or 'Current'")
     @Config.DefaultString("Current")
     public static String fullscreenResolution;
-
-    @Config.Comment("Scale mouse sensitivity when using a non-native resolution in fullscreen mode. Useful for Wayland/lwjgl3ify.")
-    @Config.DefaultBoolean(false)
-    public static boolean enableResolutionScalingMouseFix;
 }

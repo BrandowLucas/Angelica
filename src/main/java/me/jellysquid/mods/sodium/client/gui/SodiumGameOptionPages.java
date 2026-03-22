@@ -160,18 +160,6 @@ public class SodiumGameOptionPages {
                         }, opts -> Math.max(0, RESOLUTIONS.indexOf(AngelicaConfig.fullscreenResolution)))
                         .build());
 
-        String sessionType = System.getenv("XDG_SESSION_TYPE");
-        boolean isWayland = sessionType != null && sessionType.equalsIgnoreCase("wayland");
-
-        if (isWayland) {
-            secondGroupBuilder.add(OptionImpl.createBuilder(boolean.class, angelicaOpts)
-                    .setName(I18n.format("options.fullscreen.mouse_fix"))
-                    .setTooltip(I18n.format("options.fullscreen.mouse_fix.tooltip"))
-                    .setControl(TickBoxControl::new)
-                    .setBinding((opts, value) -> AngelicaConfig.enableResolutionScalingMouseFix = value, opts -> AngelicaConfig.enableResolutionScalingMouseFix)
-                    .build());
-        }
-
         groups.add(secondGroupBuilder.add(OptionImpl.createBuilder(boolean.class, angelicaOpts)
                     .setName(I18n.format("options.angelica.sleepbeforeswap"))
                     .setTooltip(I18n.format("options.angelica.sleepbeforeswap.tooltip"))
@@ -601,12 +589,6 @@ public class SodiumGameOptionPages {
         final List<OptionGroup> groups = new ArrayList<>();
 
         groups.add(OptionGroup.createBuilder()
-                .add(OptionImpl.createBuilder(boolean.class, angelicaOpts)
-                        .setName(I18n.format("sodium.options.show_fps.name"))
-                        .setTooltip(I18n.format("sodium.options.show_fps.tooltip"))
-                        .setControl(TickBoxControl::new)
-                        .setBinding((opts, value) -> AngelicaConfig.showFPS = value, opts -> AngelicaConfig.showFPS)
-                        .build())
                 .add(OptionImpl.createBuilder(boolean.class, sodiumOpts)
                         .setName(I18n.format("sodium.options.use_gl_state_cache.name"))
                         .setTooltip(I18n.format("sodium.options.use_gl_state_cache.tooltip"))

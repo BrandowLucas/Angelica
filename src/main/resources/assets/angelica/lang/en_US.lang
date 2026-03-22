@@ -239,7 +239,4 @@ sodium.options.enable_deferred_batching.tooltip=Batches particle draw calls into
 
 options.fullscreen.resolution=Fullscreen Resolution
 options.fullscreen.resolution.tooltip=Selects the resolution to be used in fullscreen mode.
-options.fullscreen.mouse_fix=Resolution Scaling Mouse Fix
-options.fullscreen.mouse_fix.tooltip=Adjusts mouse sensitivity to remain consistent when using a non-native resolution in fullscreen mode. Required for lwjgl3ify on Wayland sessions since Wayland/LWJGL2 doesn't natively support custom resolutions.
-sodium.options.show_fps.name=Show FPS
-sodium.options.show_fps.tooltip=Display the current frames per second in the top-left corner of the screen.
+
